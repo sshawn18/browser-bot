@@ -1,25 +1,23 @@
 @echo off
-echo === Browser Bot Setup ===
+echo === Browser Bot — One-time Setup ===
 echo.
 
 where python >nul 2>&1
 if %ERRORLEVEL% neq 0 (
-    echo ERROR: Python not found. Install from https://python.org
+    echo ERROR: Python not found. Install from https://python.org then re-run this.
     pause & exit /b 1
 )
 
 if not exist venv (
+    echo Creating virtual environment...
     python -m venv venv
 )
 
-call venv\Scripts\activate.bat
-pip install -r requirements.txt --quiet
-
-if not exist .env (
-    copy .env.example .env >nul
-    echo Created .env — fill in your TELEGRAM_BOT_TOKEN and TELEGRAM_CHAT_ID
-)
+echo Installing dependencies...
+venv\Scripts\pip install -r requirements.txt --quiet
 
 echo.
-echo Done! Edit .env then you're ready.
-pause
+echo Done! Opening Claude Code to complete setup...
+echo Claude will walk you through the Telegram bot configuration.
+echo.
+claude .
