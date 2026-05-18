@@ -1,104 +1,177 @@
-## Telegram Remote Control Bot
+# Browser Bot — Claude Instructions
 
-This repo lets you control your PC's Chrome browser remotely by sending tasks via Telegram.
-Claude executes them and sends a screenshot of the result back to you.
-
----
-
-## FIRST: Run this check at the start of EVERY session
-
-Check if `.env` exists in this directory:
-- **Does NOT exist** → run the Onboarding Flow below
-- **Exists** → jump straight to "Start Monitoring"
+This repo turns Claude Code into a remote-controlled browser agent. Tasks arrive via Telegram,
+Claude executes them in Chrome using the Claude in Chrome extension, and sends a screenshot
+of the result back to Telegram.
 
 ---
 
-## Onboarding Flow (only if no .env)
+## ON EVERY SESSION START: Check setup status
 
-Walk the user through these steps conversationally, one at a time. Do not dump all steps at once.
+Run this immediately — before doing anything else:
 
-### Step 1 — Create a Telegram bot
+```bash
+test -f .env && echo "READY" || echo "FIRST_RUN"
+```
+
+- Output is `READY` → skip to **Normal Operation** below
+- Output is `FIRST_RUN` → run the **First-Time Setup** flow below
+
+---
+
+## FIRST-TIME SETUP
+
+Walk the user through each step conversationally. Do one step at a time — wait for their
+response before moving to the next. Never dump all steps at once.
+
+### Step 1 — Install dependencies
+
+Run this first so it's done while the user reads instructions:
+
+```bash
+python -m venv venv && venv/Scripts/pip install -r requirements.txt -q
+```
+
+Tell the user: *"Installing dependencies in the background — while that runs, let's get your Telegram bot set up."*
+
+### Step 2 — Create a Telegram bot
+
 Tell the user:
-> "Open Telegram and message **@BotFather**. Send `/newbot`, pick a name, and follow the steps. Once you have the bot token (looks like `1234567890:ABCdef...`), paste it here."
 
-Wait for them to paste the token.
+> Open Telegram and message **@BotFather**.
+> Send `/newbot`, choose a name and username, and it will give you a token like:
+> `1234567890:ABCdefGHIjklMNOpqrSTUvwxYZ`
+> Paste that token here.
 
-### Step 2 — Get your Chat ID
+Wait for them to paste the token. Save it — you'll write it to `.env` in Step 4.
+
+### Step 3 — Get their Chat ID
+
 Tell the user:
-> "Now message **@userinfobot** on Telegram. It will instantly reply with your info — paste the **Id** number here."
 
-Wait for them to paste the ID.
+> Now message **@userinfobot** on Telegram (just send it anything).
+> It replies instantly with your info. Paste the **Id** number here.
 
-### Step 3 — Create .env
-Create a `.env` file in this directory with:
+Wait for them to paste the ID. Save it.
+
+### Step 4 — Create .env
+
+Create a `.env` file in the current directory:
+
 ```
-TELEGRAM_BOT_TOKEN=<their token>
-TELEGRAM_CHAT_ID=<their chat id>
+TELEGRAM_BOT_TOKEN=<token from Step 2>
+TELEGRAM_CHAT_ID=<id from Step 3>
 ```
 
-### Step 4 — Install dependencies
-Run this command:
-```
-python -m venv venv && venv\Scripts\pip install -r requirements.txt
-```
-Tell the user you're installing and wait for it to finish.
+### Step 5 — Verify the connection
 
-### Step 5 — Update this CLAUDE.md with the correct path
-Find the absolute path to this repo directory on the user's machine (e.g. `C:\Users\Bob\browser-bot`).
-Replace every occurrence of `REPO_PATH` in this file with that absolute path.
-This makes future sessions work without re-onboarding.
+Start the poller in the background:
 
-### Step 6 — Send a test message
-Tell the user:
-> "Send any message to your bot on Telegram to make sure it's working."
-
-Start `telegram_poller.py` in the background:
-```
+```bash
 start /B venv\Scripts\python telegram_poller.py
 ```
-Wait ~10 seconds and check `inbox.txt` — if it contains text, the connection works.
 
-### Step 7 — Done! Start monitoring
 Tell the user:
-> "You're all set! I'm now watching for tasks. Send me a message on Telegram and I'll get to work."
 
-Then proceed to Start Monitoring below.
+> Send any message to your bot on Telegram now (e.g. "hello").
+
+Wait about 10 seconds then check:
+
+```bash
+cat inbox.txt
+```
+
+- If it has text → connection works. Clear it: `echo -n "" > inbox.txt`
+- If empty → tell the user to double-check they messaged the right bot and try again
+
+### Step 6 — Done
+
+Tell the user:
+
+> You're all set! I'm now watching for tasks from Telegram.
+> Send me a task like *"search Google for Tokyo weather"* and I'll get to work.
+
+Then immediately begin **Normal Operation** below.
 
 ---
 
-## Start Monitoring
+## NORMAL OPERATION
 
-Run this command to begin watching for tasks:
+### Start monitoring
+
+Run this /loop command at the start of every session after setup is complete:
 
 ```
-/loop Check REPO_PATH\inbox.txt for a pending Telegram task. Run: cd REPO_PATH && venv\Scripts\python telegram_listener.py. If a task is printed, execute it using the Claude in Chrome extension (mcp__Claude_in_Chrome__* tools — NOT Playwright). After completing the task, send a screenshot back: cd REPO_PATH && venv\Scripts\python send_chrome_screenshot.py "task result caption". If no task, do nothing.
+/loop Check inbox.txt for a pending Telegram task by running: ./venv/Scripts/python telegram_listener.py from the browser-bot directory. If a task is printed, execute it using the Claude in Chrome extension (mcp__Claude_in_Chrome__* tools). After completing the task, send a screenshot back using: venv\Scripts\python send_chrome_screenshot.py "result caption". If no task is pending, do nothing and wait.
+```
+
+### Also start the poller if it's not running
+
+Check if `telegram_poller.py` is already running:
+
+```bash
+tasklist | grep -i python
+```
+
+If not running, start it:
+
+```bash
+start /B venv\Scripts\python telegram_poller.py
 ```
 
 ---
 
-## Task Execution Rules
+## TASK EXECUTION — Step by step
 
-- **Always use the Claude in Chrome extension** (`mcp__Claude_in_Chrome__*`) for browser control — never Playwright
-- After every task: take an extension screenshot first (activates the correct Chrome tab), then run `send_chrome_screenshot.py`
-- Clear `inbox.txt` after reading (write empty string) so the monitor doesn't re-trigger
+When a task arrives in `inbox.txt`:
 
-## Screenshot Pipeline
+1. **Read the task** — run `./venv/Scripts/python telegram_listener.py` (prints task and clears inbox)
+2. **Acknowledge** — run `venv\Scripts\python telegram_notify.py "⏳ On it: <task>"` so the user knows you got it
+3. **Execute in Chrome** — use `mcp__Claude_in_Chrome__*` tools to complete the task
+4. **Take an extension screenshot** — use `mcp__Claude_in_Chrome__computer` (this activates the correct Chrome tab)
+5. **Send screenshot to Telegram** — run `venv\Scripts\python send_chrome_screenshot.py "<what you did>"`
+6. **Done** — go back to watching inbox.txt
 
-1. Use `mcp__Claude_in_Chrome__computer` to take a screenshot (forces Chrome to show the working tab)
-2. Run: `venv\Scripts\python send_chrome_screenshot.py "caption"` from REPO_PATH
-3. This minimizes terminal windows, maximizes Chrome, captures full screen via DXGI, and sends the JPEG directly to Telegram
+### Rules
+- **Always use the Claude in Chrome extension** — never Playwright, never a headless browser
+- The extension screenshot in step 4 is required before `send_chrome_screenshot.py` — it forces Chrome to show the right tab
+- `send_chrome_screenshot.py` minimizes terminals, maximizes Chrome, captures full screen via DXGI (GPU-rendered), and sends directly to Telegram — no upload needed
 
-## Error Reporting
+---
 
-If something goes wrong and you need the user to see what's on screen:
-1. Take an extension screenshot of the error state
+## ERROR REPORTING
+
+If something goes wrong mid-task and the user needs to see what's on screen:
+
+1. Take an extension screenshot of the error state: `mcp__Claude_in_Chrome__computer`
 2. Run: `venv\Scripts\python send_chrome_screenshot.py "Error: <description>"`
+3. Send a text explanation: `venv\Scripts\python telegram_notify.py "❌ <what went wrong>"`
 
-## Scripts Reference
+---
 
-| Script | Purpose |
+## SCRIPTS REFERENCE
+
+| Script | What it does |
 |---|---|
-| `telegram_poller.py` | Background process — polls Telegram every 5s, writes tasks to inbox.txt |
-| `telegram_listener.py` | Read + clear inbox.txt (Claude calls this to get the current task) |
-| `send_chrome_screenshot.py` | Screenshot Chrome via DXGI → send photo to Telegram |
-| `telegram_notify.py` | Send plain text message to Telegram |
+| `telegram_poller.py` | Background process — polls Telegram every 5s, writes new tasks to `inbox.txt`, sends instant ack |
+| `telegram_listener.py` | Reads and clears `inbox.txt` — prints the task or nothing if empty |
+| `send_chrome_screenshot.py` | Minimizes terminals → maximizes Chrome → DXGI capture → sends JPEG to Telegram |
+| `telegram_notify.py` | Sends a plain text message to Telegram |
+
+---
+
+## FILE STRUCTURE
+
+All paths below are relative to this repo root:
+
+```
+browser-bot/
+├── .env                    ← your credentials (never commit this)
+├── .env.example            ← template
+├── inbox.txt               ← task queue (one task at a time)
+├── telegram_poller.py      ← run in background, always
+├── telegram_listener.py    ← called by Claude to read inbox
+├── send_chrome_screenshot.py
+├── telegram_notify.py
+└── requirements.txt
+```
