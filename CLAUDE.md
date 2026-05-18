@@ -6,13 +6,26 @@ of the result back to Telegram.
 
 ---
 
-## ON EVERY SESSION START: Check setup status
+## ⚠️ FIRST-TIME SETUP CHECK — Run this before anything else
 
-Run this immediately — before doing anything else:
+At the very start of every session, check whether `.env` exists:
 
 ```bash
 test -f .env && echo "READY" || echo "FIRST_RUN"
 ```
+
+**If output is `FIRST_RUN`:** Stop everything. Do not proceed to Normal Operation.
+Guide the user through the setup flow below before doing anything else.
+
+**If output is `READY`:** Skip to **Normal Operation**.
+
+The user cannot send Telegram tasks without a valid `.env`. Always check first.
+
+---
+
+## ON EVERY SESSION START: Check setup status
+
+Run the check above immediately — before doing anything else:
 
 - Output is `READY` → skip to **Normal Operation** below
 - Output is `FIRST_RUN` → run the **First-Time Setup** flow below
@@ -56,7 +69,13 @@ Wait for them to paste the ID. Save it.
 
 ### Step 4 — Create .env
 
-Create a `.env` file in the current directory:
+Copy the template and fill in the credentials:
+
+```bash
+cp .env.example .env
+```
+
+Then open `.env` and set:
 
 ```
 TELEGRAM_BOT_TOKEN=<token from Step 2>

@@ -17,7 +17,7 @@ Claude opens Chrome, runs the search, and sends you a photo of the results — a
 |---|---|
 | Windows PC | Must be on when you want to send tasks |
 | [Claude Code](https://claude.ai/code) | The AI that executes your tasks |
-| [Claude in Chrome extension](https://chromewebstore.google.com/search/claude) | Installed in Chrome — gives Claude browser control |
+| [Claude for Chrome](https://chromewebstore.google.com/detail/claude/fcoeoabgfenejglbffodgkkbkcdhcgfn) | Official Anthropic extension — gives Claude browser control |
 | Python 3.10+ | For the Telegram scripts |
 | Telegram account | Free — you'll create a bot in 2 minutes |
 
@@ -28,14 +28,20 @@ Claude opens Chrome, runs the search, and sends you a photo of the results — a
 ```bash
 git clone https://github.com/sshawn18/browser-bot.git
 cd browser-bot
+setup.bat
 ```
 
-Then open the `browser-bot` folder in **Claude Code** and say:
+`setup.bat` creates a virtual environment and installs all dependencies automatically.
+
+Then open Claude Code **from inside the `browser-bot` folder** (not from a parent directory or elsewhere) and say:
 
 > **"Set this up for me"**
 
 Claude will guide you through the rest — creating your Telegram bot, getting your chat ID,
-installing dependencies, and starting the monitor. **You don't need to follow any manual steps.**
+and starting the monitor. **You don't need to follow any manual steps.**
+
+> ⚠️ **Important:** Claude Code must be opened with `browser-bot` as the working directory.
+> If you open it from the wrong folder, Claude won't find the scripts or `.env` file.
 
 ---
 
