@@ -124,19 +124,15 @@ Run this /loop command at the start of every session after setup is complete:
 /loop Check inbox.txt for a pending Telegram task by running: ./venv/Scripts/python telegram_listener.py from the browser-bot directory. If a task is printed, execute it using the Claude in Chrome extension (mcp__Claude_in_Chrome__* tools). After completing the task, send a screenshot back using: venv\Scripts\python send_chrome_screenshot.py "result caption". If no task is pending, do nothing and wait.
 ```
 
-### Also start the poller if it's not running
+### Always start the poller
 
-Check if `telegram_poller.py` is already running:
-
-```bash
-tasklist | grep -i python
-```
-
-If not running, start it:
+Always start the poller at session start — don't assume it's running. Run this every time:
 
 ```bash
 start /B venv\Scripts\python telegram_poller.py
 ```
+
+It's safe to run multiple times. If already running, the extra instance will just idle harmlessly.
 
 ---
 
